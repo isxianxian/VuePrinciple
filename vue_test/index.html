@@ -8,23 +8,28 @@
 </head>
 
 <body>
-    <div id='app'>
+    <div id="app">
         {{arr}}
     </div>
 
 </body>
-<script src="/dist/vue.js"></script>
+<script src="https://cdn.jsdelivr.net/npm/vue@2/dist/vue.js"></script>
 <script>
     let vm = new Vue({
         el: '#app',
         data() {
             return {
-                name: 'jjjj',
+                k: 'kkk',
                 arr: [1, 2, { age: '12' }]
             }
-        },
+        }
     })
-    vm._data.arr.push('jkjkj');
+
+    setTimeout(() => {
+        vm._data.arr.push('jjljl');
+    }, 1000)
+
+
 </script>
 
 </html>
