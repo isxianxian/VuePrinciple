@@ -282,11 +282,96 @@
      }
    }
 
+   const defaultTagRE = /\{\{((?:.|\r?\n)+?)\}\}/g; //匹配花括号 {{  }} 捕获花括号里面的内容
+   // 解析节点
+
+   function gen(node) {
+     let {
+       type
+     } = node;
+
+     if (type == 1) {
+       // 如果是元素的话，直接创建一个元素字符串
+       return generate(node);
+     } // 文本，需要判断是普通文本还是{{ 变量 }}
+
+
+     let {
+       text
+     } = node;
+
+     if (!defaultTagRE.test(text)) {
+       return `_v(${JSON.stringify(text)})`;
+     } // 重置正则匹配位置
+
+
+     let lastIndex = defaultTagRE.lastIndex = 0;
+     let tokens = [];
+     let match, index;
+
+     while (match = defaultTagRE.exec(text)) {
+       index = match.index;
+
+       if (index > lastIndex) {
+         tokens.push(JSON.stringify(text.slice(lastIndex, index)));
+       }
+
+       tokens.push(`_s(${match[1].trim()})`);
+       lastIndex = index + match[0].length;
+     }
+
+     if (lastIndex < text.length) {
+       tokens.push(JSON.stringify(text.slice(lastIndex)));
+     }
+
+     let s = `_v(${tokens.join('+')})`;
+     return s;
+   }
+
+   function genProps(attrs) {
+     if (!attrs.length) return 'undefined';
+     let obj = {};
+
+     for (let i = 0; i < attrs.length; i++) {
+       let {
+         name,
+         value
+       } = attrs[i];
+
+       obj[name] = value;
+     }
+
+     return obj;
+   }
+
+   function getChildren(el) {
+     let {
+       childrens
+     } = el;
+     if (!childrens.length) return ""; // 如果没有子元素，返回空字符串
+
+     let res = childrens.map(child => {
+       return gen(child);
+     });
+     return res.join(',');
+   }
+
+   function generate(el) {
+     let children = getChildren(el);
+     let attr = genProps(el.attrs);
+     return `_c('${el.tagName}' , ${attr} , ${children})`;
+   }
+
    // compileToFunctions 模板转换核心方法，将vue语法转换成render函数。render函数执行转化为dom元素。
    function compileToFunctions(template) {
      // 1. 将template字符串转化为ast语法树。描述代码的html，css，js 结构。
-     let ast = parse(template);
-     console.log(ast, '7'); // 2. 将ast语法树转化为render函数
+     let ast = parse(template); // 2. 将ast语法树转化为render函数
+
+     let code = generate(ast);
+     console.log(code, '11'); // _c('div' , {id:'app'} , _v('hello'+_s(name)), _c('span',undefined,_v("world")) )
+     // _c：创建一个元素，参数是元素，属性集合，子节点
+     // _v: 创建普通文本，参数是文本字符串
+     // _s：创建变量文本，先获取到变量，再用JSON.stringify将其转化为字符串
    }
 
    // 初始化js
