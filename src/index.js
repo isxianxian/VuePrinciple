@@ -1,12 +1,10 @@
-import {initMixin} from './init.js';
+import { initMixin } from './init.js';
 
-
-function Vue(option){
-    this.init(option);
+function Vue(option) {
+  this.init(option);
 }
 
 initMixin(Vue);
-
 
 
 export default Vue;

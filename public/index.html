@@ -2,29 +2,29 @@
 <html lang="en">
 
 <head>
-    <meta charset="UTF-8">
-    <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Document</title>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Document</title>
 </head>
 
 <body>
-    <div id='app'>
-        {{arr}}
-    </div>
+  <div id='app' a='b'>
+    <span>{{name}}</span>
+  </div>
 
 </body>
 <script src="/dist/vue.js"></script>
 <script>
-    let vm = new Vue({
-        el: '#app',
-        data() {
-            return {
-                name: 'jjjj',
-                arr: [1, 2, { age: '12' }]
-            }
-        },
-    })
-    vm._data.arr.push('jkjkj');
+  let vm = new Vue({
+    el: '#app',
+    data() {
+      return {
+        name: 'jjjj',
+        arr: [1, 2, { age: '12' }]
+      }
+    },
+  })
+  vm._data.arr.push('jkjkj');
 </script>
 
 </html>
