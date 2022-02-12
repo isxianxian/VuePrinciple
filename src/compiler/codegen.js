@@ -2,64 +2,50 @@ const defaultTagRE = /\{\{((?:.|\r?\n)+?)\}\}/g; //匹配花括号 {{  }} 捕获
 
 // 解析节点
 function gen(node) {
-  let { type } = node;
-  if (type == 1) { // 如果是元素的话，直接创建一个元素字符串
+  if (node.type == 1) {
     return generate(node);
   }
-  // 文本，需要判断是普通文本还是{{ 变量 }}
+
   let { text } = node;
+  // 普通文本
   if (!defaultTagRE.test(text)) {
-    return `_v(${JSON.stringify(text)})`;
+    return `_v(${text})`;
   }
-
-  // 重置正则匹配位置
-  let lastIndex = (defaultTagRE.lastIndex = 0);
-  let tokens = [];
-  let match, index;
-
-  while ((match = defaultTagRE.exec(text))) {
-    index = match.index;
-    if (index > lastIndex) {
-      tokens.push(JSON.stringify(text.slice(lastIndex, index)));
-    }
-    tokens.push(`_s(${match[1].trim()})`);
-    lastIndex = index + match[0].length;
-  }
-  if (lastIndex < text.length) {
-    tokens.push(JSON.stringify(text.slice(lastIndex)));
-  }
-  let s = `_v(${tokens.join('+')})`;
-  return s;
 }
 
 function genProps(attrs) {
   if (!attrs.length) return 'undefined';
-  let obj = {};
-
+  let str = '';
   for (let i = 0; i < attrs.length; i++) {
     let { name, value } = attrs[i];
     if (name == 'style') {
+      let obj = {};
+      value = value.split(';');
+      value.map(item => {
+        if (item) {
+          let [key, val] = item.split(':');
+          obj[key] = val;
+        }
+      })
+      value = JSON.stringify(obj);
     }
-    obj[name] = value;
+    str += `${name}:${value},`;
   }
-
-  return obj;
+  str = `{${str.slice(0, str.length - 1)}}`
+  return str;
 }
 
-function getChildren(el) {
-  let { childrens } = el;
-  if (!childrens.length) return ""; // 如果没有子元素，返回空字符串
-  let res = (childrens.map(child => {
-    return gen(child);
-  }))
-  return res.join(',');
+function getChildren(childrens) {
+  if (!childrens.length) return '';
+  return (childrens.map(child => gen(child))).join(',');
 }
 
-function generate(el) {
-  let children = getChildren(el);
-  let attr = genProps(el.attrs);
-  return `_c('${el.tagName}' , ${attr} , ${children})`;
+// 元素节点
+function generate(node) {
+  let { tagName, attrs, childrens } = node;
+  return `_c(${tagName} ,${genProps(attrs)},${getChildren(childrens)})`
+  console.log(node, '14')
 }
 
 
-export { generate };
+export { generate, gen };

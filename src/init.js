@@ -32,6 +32,7 @@ export function initMixin(Vue) {
       if (template) {
         // compileToFunctions 模板转换核心方法
         const render = compileToFunctions(template);
+        render.call(this);
         options.render = render;
       }
     }
