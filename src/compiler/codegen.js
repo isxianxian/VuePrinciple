@@ -9,8 +9,24 @@ function gen(node) {
   let { text } = node;
   // 普通文本
   if (!defaultTagRE.test(text)) {
-    return `_v(${text})`;
+    return `_v(${JSON.stringify(text)})`;
   }
+
+  let lastIndex = defaultTagRE.lastIndex = 0;
+  let exec, tokens = [];
+  while ((exec = defaultTagRE.exec(text))) {
+    let index = exec.index;
+    if (index > lastIndex) {
+      tokens.push(JSON.stringify(text.slice(lastIndex, index)));
+    }
+    tokens.push(`_s(${exec[1].trim()})`);
+    lastIndex = index + exec[0].length;
+  }
+  if (lastIndex < text.length) {
+    tokens.push(JSON.stringify(text.slice(lastIndex)));
+  }
+  let str = `_v(${tokens.join('+')})`;
+  return str;
 }
 
 function genProps(attrs) {
@@ -27,8 +43,9 @@ function genProps(attrs) {
           obj[key] = val;
         }
       })
-      value = JSON.stringify(obj);
+      value = obj;
     }
+    value = JSON.stringify(value);
     str += `${name}:${value},`;
   }
   str = `{${str.slice(0, str.length - 1)}}`
@@ -43,9 +60,8 @@ function getChildren(childrens) {
 // 元素节点
 function generate(node) {
   let { tagName, attrs, childrens } = node;
-  return `_c(${tagName} ,${genProps(attrs)},${getChildren(childrens)})`
-  console.log(node, '14')
+  return `_c('${tagName}' ,${genProps(attrs)},${getChildren(childrens)})`
 }
 
 
-export { generate, gen };
+export { generate };

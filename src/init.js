@@ -1,6 +1,8 @@
 // 初始化js
 import { initState } from './state.js';
 import { compileToFunctions } from './compiler/index.js';
+import { mountComponent } from './lifecycle.js';
+
 
 export function initMixin(Vue) {
   Vue.prototype.init = function (options) {
@@ -32,11 +34,12 @@ export function initMixin(Vue) {
       if (template) {
         // compileToFunctions 模板转换核心方法
         const render = compileToFunctions(template);
-        render.call(this);
         options.render = render;
       }
     }
 
+    // 组件挂载的核心方法。把当前的组件示例挂载到真试的dom元素上。
+    return mountComponent(vm, el);
   }
 
 }

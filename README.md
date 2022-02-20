@@ -16,3 +16,27 @@ Vue 初始化 js
 
 **observer**  
 数据劫持
+
+## 原理
+
+**初始渲染**  
+通过 template 或 el 的 innerHTML 生成 render 函数；
+
+```
+  生成ast语法树；再将ast语法树转化为render函数；
+  render 函数通过_c（创建元素虚拟节点），_v（创建文本虚拟节点），_s（获取变量，通过with 和 将data数据代理到this实例上） 组成。
+```
+
+render 函数执行生成虚拟节点；
+
+```
+  虚拟节点 vnode（节点实例，有tag，key，data，children，text属性）。
+```
+
+\_update 函数执行将虚拟节点转化为真实的 dom 元素渲染到页面；
+
+```
+  通过tag判断是元素还是文本。
+  元素：createElement。添加属性（style[key] = val；className；setAttribute）；children递归创建元素并通过appendChild添加到父元素上。
+  文本：createTextNode。
+```
