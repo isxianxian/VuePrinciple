@@ -1,5 +1,6 @@
 import { isObject, def } from '../util/index.js';
 import arrayMethods from './array.js';
+import Dep from './dep.js';
 
 
 class Observer {
@@ -43,17 +44,25 @@ class Observer {
 
 // 对data的每个属性都进行响应式设计
 function defineReactive(data, key, val) {
-  observer(val)
+  observer(val);
+
+  let dep = new Dep();  // 检测的每个属性都实例化一个dep。
+
   Object.defineProperty(data, key, {
     get() {
-      console.log(`获取${key}属性值`)
+      console.log(`获取${key}属性值`);
+      // 获取值的时候如果有渲染视图，这时候就能将值和视图绑定起来。
+      if (Dep.target) {
+        dep.depend();
+      }
       return val;
     },
     set(newVal) {// 依赖收集
       if (newVal == val) return;
       console.log('设置新的属性值');
+      observer(newVal);
       val = newVal;
-      observer(newVal)
+      dep.notify(); // 当设置新值的时候，通知关联的watcher去更新
     }
   })
 }
