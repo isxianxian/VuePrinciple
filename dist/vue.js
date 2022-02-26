@@ -39,9 +39,53 @@
        }
 
        inserted ? ob.observerArray(inserted) : '';
+       ob.dep.notify(); // 派发更新
+
        return res;
      };
    });
+
+   // dep 每个属性都有自己的依赖。建立和watcher多对多的关系。
+   let id$1 = 0;
+   class Dep {
+     constructor() {
+       this.id = id$1++;
+       this.subs = []; // 收集关联的watcher 
+     }
+
+     depend() {
+       // 通知当前渲染的watcher去关联dep
+       if (Dep.target) {
+         Dep.target.addDep(this);
+       }
+     }
+
+     addSub(watcher) {
+       // dep关联watcher
+       this.subs.push(watcher);
+     }
+
+     notify() {
+       // 通知关联的watcher更新
+       console.log('kkk');
+       this.subs.forEach(watcher => watcher.update());
+     }
+
+   }
+   Dep.target = null; // 全局变量，指向当前渲染的Watcher。
+
+   const targetStack = []; // 栈结构用来存watcher
+
+   function pushTarget(watcher) {
+     targetStack.push(watcher); // 当渲染视图的时候，将当前视图监测器放到栈结构中。并全局声明当前渲染器。
+
+     Dep.target = watcher;
+   }
+   function popTarget() {
+     targetStack.pop(); // 当视图渲染结束，将视图监测器从栈结构拿出，并获取上一个watcher。
+
+     Dep.target = targetStack[targetStack.length - 1];
+   }
 
    class Observer {
      constructor(data) {
@@ -51,7 +95,9 @@
        //   configurable: false,
        //   value: this,
        // })
-       def(data, '_ob', this);
+       def(data, '_ob', this); // this 就是Observer实例
+
+       this.dep = new Dep();
 
        if (Array.isArray(data)) {
          // 如果是数组的话，不会对索引进行监测，因为会影响性能。
@@ -84,10 +130,25 @@
 
 
    function defineReactive(data, key, val) {
-     observer(val);
+     let childOb = observer(val);
+     let dep = new Dep(); // 检测的每个属性都实例化一个dep。
+
      Object.defineProperty(data, key, {
        get() {
-         console.log(`获取${key}属性值`);
+         console.log(`获取${key}属性值`); // 获取值的时候如果有渲染视图，这时候就能将值和视图绑定起来。
+
+         if (Dep.target) {
+           dep.depend();
+         }
+
+         if (childOb) {
+           childOb.dep.depend(); // 如果是数组，递归收集依赖
+
+           if (Array.isArray(val)) {
+             dependArray(val);
+           }
+         }
+
          return val;
        },
 
@@ -95,11 +156,26 @@
          // 依赖收集
          if (newVal == val) return;
          console.log('设置新的属性值');
-         val = newVal;
          observer(newVal);
+         val = newVal;
+         dep.notify(); // 当设置新值的时候，通知关联的watcher去更新
        }
 
      });
+   } // 递归收集数组依赖
+
+
+   function dependArray(val) {
+     let e;
+
+     for (let i = 0; i < val.length; i++) {
+       e = val[i];
+       e && e._ob && e._ob.dep.depend();
+
+       if (Array.isArray(e)) {
+         dependArray(e);
+       }
+     }
    } // 导出一个监听函数，用来监听data对象的属性变化。
    // 使用了defineProperty，此方法不兼容ie8及其以下版本，所以vue2不兼容ie8。
 
@@ -110,7 +186,7 @@
      } // 创建一个类进行数据劫持。
 
 
-     new Observer(data);
+     return new Observer(data);
    }
 
    function initState(vm) {
@@ -129,11 +205,29 @@
      if (opts.watch) ;
    }
 
+   function proxy(vm, key, source) {
+     Object.defineProperty(vm, key, {
+       get() {
+         return vm[source][key];
+       },
+
+       set(newVal) {
+         observer(newVal);
+         vm[source][key] = newVal;
+       }
+
+     });
+   }
+
    function initData(vm) {
      let data = vm.$options.data;
      vm._data = data = typeof data === 'function' ? data.call(vm) : data; // 监听data的变化来实时影响视图 ==> 数据影响视图。
 
      observer(data);
+
+     for (let key in data) {
+       proxy(vm, key, '_data'); // 数据代理，将data中的数据代理到实例对象上。
+     }
    }
 
    // 以下为源码的正则  
@@ -295,8 +389,30 @@
      } = node; // 普通文本
 
      if (!defaultTagRE.test(text)) {
-       return `_v(${text})`;
+       return `_v(${JSON.stringify(text)})`;
      }
+
+     let lastIndex = defaultTagRE.lastIndex = 0;
+     let exec,
+         tokens = [];
+
+     while (exec = defaultTagRE.exec(text)) {
+       let index = exec.index;
+
+       if (index > lastIndex) {
+         tokens.push(JSON.stringify(text.slice(lastIndex, index)));
+       }
+
+       tokens.push(`_s(${exec[1].trim()})`);
+       lastIndex = index + exec[0].length;
+     }
+
+     if (lastIndex < text.length) {
+       tokens.push(JSON.stringify(text.slice(lastIndex)));
+     }
+
+     let str = `_v(${tokens.join('+')})`;
+     return str;
    }
 
    function genProps(attrs) {
@@ -318,9 +434,10 @@
              obj[key] = val;
            }
          });
-         value = JSON.stringify(obj);
+         value = obj;
        }
 
+       value = JSON.stringify(value);
        str += `${name}:${value},`;
      }
 
@@ -340,7 +457,7 @@
        attrs,
        childrens
      } = node;
-     return `_c(${tagName} ,${genProps(attrs)},${getChildren(childrens)})`;
+     return `_c('${tagName}' ,${genProps(attrs)},${getChildren(childrens)})`;
    }
 
    // compileToFunctions 模板转换核心方法，将vue语法转换成render函数。render函数执行转化为dom元素。
@@ -348,11 +465,10 @@
      // 1. 将template字符串转化为ast语法树。描述代码的html，css，js 结构。
      let ast = parse(template); // 2. 将ast语法树转化为render字符串函数体
 
-     let code = gen(ast);
-     console.log(code, '11'); // 3. 转换成render函数
-     // let renderFn = new Function(`with(this){return ${code}}`)
-     // return renderFn;
-     // _c('div' , {id:'app'} , _v('hello'+_s(name)), _c('span',undefined,_v("world")) )
+     let code = generate(ast); // 3. 转换成render函数
+
+     let renderFn = new Function(`with(this){return ${code}}`);
+     return renderFn; // _c('div' , {id:'app'} , _v('hello'+_s(name)), _c('span',undefined,_v("world")) )
      // _c：创建一个元素，参数是元素，属性集合，子节点
      // _v: 创建普通文本，参数是文本字符串
      // _s：创建变量文本，先获取到变量，再用JSON.stringify将其转化为字符串
@@ -362,6 +478,227 @@
    // with
    //    with(obj){ statements }，statements 语句执行。
    //    使用with关键词关联obj对象，解析时，将statements 里面的变量都当作了局部变量；如果局部变量和obj对象中的属性同名，那局部变量就会指向obj中的属性。
+   // 模板编译生成render
+
+   // patch 是用来渲染和更新视图的。
+   function patch(oldVnode, vnode) {
+     let isRealElement = oldVnode.nodeType;
+
+     if (isRealElement) {
+       // 先将虚拟节点转化为真实的dom元素
+       // 利用原来元素的位置插入生成的真实dom元素（父节点，兄弟节点，insertBefore）
+       // 再删除原来元素
+       let oldEle = oldVnode;
+       let parentEle = oldEle.parentNode;
+       let el = createElement$1(vnode);
+       parentEle.insertBefore(el, oldEle.nextSibling); // 使用insertBefore是为了不破换位置。
+
+       parentEle.removeChild(oldEle);
+       return el;
+     }
+   }
+
+   function createElement$1(vnode) {
+     let {
+       tag,
+       data,
+       key,
+       children,
+       text
+     } = vnode;
+
+     if (typeof tag == 'string') {
+       // 元素节点
+       vnode.el = document.createElement(tag);
+       updateProperties(vnode); // 更新属性
+
+       children ? children.forEach(child => {
+         return vnode.el.appendChild(createElement$1(child)); // appendChild 插入一个子元素。返回插入的元素。
+       }) : '';
+     } else {
+       // 文本节点
+       vnode.el = document.createTextNode(text);
+     }
+
+     return vnode.el;
+   }
+
+   function updateProperties(vnode) {
+     let {
+       el,
+       data: newProps = {}
+     } = vnode;
+
+     for (let attr in newProps) {
+       let val = newProps[attr];
+
+       if (attr == 'style') {
+         for (let styleName in val) {
+           el.style[styleName] = val[styleName];
+         }
+       } else if (attr == 'class') {
+         el.className = val;
+       } else {
+         el.setAttribute(attr, val);
+       }
+     }
+   }
+
+   // nextTick 实现原理
+   let callbacks = [];
+   let pending = false;
+
+   function flushCallbacks() {
+     // 同步任务，callbacks中的函数依次执行。
+     pending = false;
+
+     for (let i = 0; i < callbacks.length; i++) {
+       callbacks[i]();
+     }
+   }
+
+   let timerFunc; // 定义异步方法，优雅降级（优先级，有啥用啥）
+
+   if (typeof Promise !== "undefined") {
+     const p = Promise.resolve();
+
+     timerFunc = () => {
+       p.then(flushCallbacks);
+     };
+   } else if (typeof MutationObserver !== 'undefined') {
+     // MutationObserver 监听dom变化。 当dom发生变化，执行回调函数，也是个异步。
+     let counter = 1;
+     const textNode = document.createTextNode(String(counter));
+     const observer = new MutationObserver(flushCallbacks);
+     observer.observe(textNode, {
+       characterData: true
+     });
+
+     timerFunc = () => {
+       // 通过改变dom元素的data值来触发监听函数
+       counter = (counter + 1) % 2;
+       textNode.data = counter;
+     };
+   } else if (typeof setImmediate !== 'undefined') {
+     timerFunc = () => {
+       setImmediate(flushCallbacks);
+     };
+   } else {
+     timerFunc = () => {
+       setTimeout(flushCallbacks, 0);
+     };
+   }
+
+   function nextTick(cb) {
+     callbacks.push(cb);
+
+     if (!pending) {
+       // 此时没有执行异步任务，手动调用；如果已经在执行异步了，cb在callbacks中等待执行即可。
+       pending = true;
+       timerFunc();
+     }
+   }
+
+   let queue = []; // 队列数组
+
+   let has = {}; // 执行队列中的方法
+
+   function flushScheduleQueue() {
+     for (let i = 0; i < queue.length; i++) {
+       queue[i].run();
+     }
+
+     queue = [];
+     has = {};
+   } // 把watcher放到队列中，等所有数据更新完成后再视图刷新
+
+
+   function queueWatcher(watcher) {
+     let id = watcher.id;
+
+     if (has[id] === 'undefined') {
+       has[id] = true;
+       queue.push(watcher);
+       nextTick(flushScheduleQueue);
+     }
+   }
+
+   // Watcher 监听者 当数据变化的时候指挥watcher去执行某些方法来更新。
+   let id = 0;
+   class Watcher {
+     constructor(vm, exprOrFn, cb, options) {
+       this.vm = vm;
+       this.exprOrFn = exprOrFn; // 当前的视图渲染函数
+
+       this.cb = cb; // 回调函数，比如可以在更新update之前执行beforeUpdate方法
+
+       this.options = options; // 额外的选项 true代表渲染watcher
+
+       this.id = id++; // watcher唯一的标识
+
+       this.deps = []; // 存放有关的dep的容器
+
+       this.depsId = new Set(); // 用来去重id
+
+       if (typeof exprOrFn === 'function') {
+         this.getter = exprOrFn;
+       }
+
+       this.get(); // 实例化Watcher的时候get执行，渲染视图。
+     }
+
+     get() {
+       pushTarget(this); // 视图渲染前将当前watcher放到全局中。表示watcher监测的组件正在渲染。
+
+       this.getter(); // 视图渲染函数执行。
+
+       popTarget(); // 视图渲染完将当前watcher移除。
+     }
+
+     addDep(dep) {
+       let id = dep.id; // 如果watcher关联的deps中没有，才把这个加入到deps集合中，才通知dep去关联watcher
+
+       if (!this.depsId.has(id)) {
+         this.depsId.add(id); // new Set的方法：has add
+
+         this.deps.push(dep);
+         dep.addSub(this);
+       }
+     }
+
+     update() {
+       // 视图更新方法
+       queueWatcher(this);
+     }
+
+     run() {
+       //视图重新渲染
+       this.get();
+     }
+
+   }
+
+   // 生命周期js函数
+   function lifecycleMixin(Vue) {
+     Vue.prototype._update = function (vnode) {
+       const vm = this;
+       return patch(vm.$el, vnode); // 将虚拟节点转换为真实dom元素渲染到页面上。
+     };
+   }
+   function mountComponent(vm, el) {
+     // 把真实的el选项赋值给示例的$el属性，为之后新dom替换旧dom做铺垫。
+     vm.$el = el; // 渲染视图的核心方法
+
+     let updateComponent = () => {
+       let node = vm._render();
+
+       vm.$el = vm._update(node); // render 函数执行生成虚拟dom；
+       // update 函数执行将虚拟dom转成真实的dom元素渲染到页面上。
+     }; // 渲染一次视图就创建一个视图渲染监视器Watcher(实际的视图渲染在实例化watcher里面)
+
+
+     new Watcher(vm, updateComponent, null, true);
+   }
 
    // 初始化js
    function initMixin(Vue) {
@@ -392,10 +729,12 @@
          if (template) {
            // compileToFunctions 模板转换核心方法
            const render = compileToFunctions(template);
-           render.call(this);
            options.render = render;
          }
-       }
+       } // 组件挂载的核心方法。把当前的组件示例挂载到真试的dom元素上。
+
+
+       return mountComponent(vm, el);
      };
    }
    /**
@@ -405,11 +744,65 @@
     * 
     */
 
+   // 定义虚拟节点
+   class Vnode {
+     constructor(tag, data, key, children, text) {
+       this.tag = tag;
+       this.data = data;
+       this.key = key;
+       this.children = children;
+       this.text = text;
+     }
+
+   }
+   function createElement(tag, data = {}, ...children) {
+     // 除了tag和data，其余的都是子元素
+     let {
+       key
+     } = data;
+     return new Vnode(tag, data, key, children, undefined);
+   }
+   function createTextNode(text) {
+     //  字符串 'undefined' 和 undefined 是不一样的！
+     return new Vnode(undefined, undefined, undefined, undefined, text);
+   }
+
+   function renderMixin(Vue) {
+     // 将_render 方法绑定到vue的原型上。
+     Vue.prototype._render = function () {
+       const vm = this;
+       const {
+         render
+       } = vm.$options;
+       return render.call(vm); // render 函数执行返回虚拟dom。注意函数中this的指向。
+     };
+
+     Vue.prototype._c = function (...arg) {
+       // 创建虚拟dom元素
+       return createElement(...arg);
+     };
+
+     Vue.prototype._v = function (text) {
+       // 创建虚拟文本元素
+       return createTextNode(text);
+     };
+
+     Vue.prototype._s = function (val) {
+       return val == null ? '' : typeof val == 'object' ? JSON.stringify(val) : val;
+     };
+
+     Vue.prototype.$nextTick = nextTick; // 手动调用异步方法。
+   }
+
    function Vue(option) {
      this.init(option);
    }
 
-   initMixin(Vue);
+   initMixin(Vue); // 绑定初始化方法
+
+   renderMixin(Vue); // 绑定render渲染方法
+
+   lifecycleMixin(Vue); // 绑定生命周期函数
 
    return Vue;
 

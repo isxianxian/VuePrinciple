@@ -1,4 +1,5 @@
 import { createElement, createTextNode } from './vdom/index.js';
+import { nextTick } from './util/next-tick.js';
 
 export function renderMixin(Vue) {
   // 将_render 方法绑定到vue的原型上。
@@ -23,4 +24,6 @@ export function renderMixin(Vue) {
       : typeof val == 'object'
         ? JSON.stringify(val) : val
   }
+
+  Vue.prototype.$nextTick = nextTick; // 手动调用异步方法。
 }

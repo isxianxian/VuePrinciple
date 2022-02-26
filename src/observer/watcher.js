@@ -1,6 +1,7 @@
 // Watcher 监听者 当数据变化的时候指挥watcher去执行某些方法来更新。
 
 import { pushTarget, popTarget } from './dep.js';
+import { queueWatcher } from './scheduler.js';
 
 let id = 0;
 
@@ -40,6 +41,10 @@ export default class Watcher {
   }
 
   update() { // 视图更新方法
-    this.get();
+    queueWatcher(this);
+  }
+
+  run() {  //视图重新渲染
+    this.get()
   }
 }
