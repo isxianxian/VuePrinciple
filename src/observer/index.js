@@ -12,7 +12,8 @@ class Observer {
     //   value: this,
     // })
 
-    def(data, '_ob', this);
+    def(data, '_ob', this); // this 就是Observer实例
+    this.dep = new Dep();
 
 
     if (Array.isArray(data)) {
@@ -44,7 +45,7 @@ class Observer {
 
 // 对data的每个属性都进行响应式设计
 function defineReactive(data, key, val) {
-  observer(val);
+  let childOb = observer(val);
 
   let dep = new Dep();  // 检测的每个属性都实例化一个dep。
 
@@ -54,6 +55,13 @@ function defineReactive(data, key, val) {
       // 获取值的时候如果有渲染视图，这时候就能将值和视图绑定起来。
       if (Dep.target) {
         dep.depend();
+      }
+      if (childOb) {
+        childOb.dep.depend();
+        // 如果是数组，递归收集依赖
+        if (Array.isArray(val)) {
+          dependArray(val);
+        }
       }
       return val;
     },
@@ -67,6 +75,18 @@ function defineReactive(data, key, val) {
   })
 }
 
+// 递归收集数组依赖
+function dependArray(val) {
+  let e;
+  for (let i = 0; i < val.length; i++) {
+    e = val[i];
+    e && e._ob && e._ob.dep.depend();
+    if (Array.isArray(e)) {
+      dependArray(e);
+    }
+  }
+}
+
 // 导出一个监听函数，用来监听data对象的属性变化。
 // 使用了defineProperty，此方法不兼容ie8及其以下版本，所以vue2不兼容ie8。
 export function observer(data) {
@@ -74,5 +94,5 @@ export function observer(data) {
     return;
   }
   // 创建一个类进行数据劫持。
-  new Observer(data);
+  return new Observer(data);
 }
