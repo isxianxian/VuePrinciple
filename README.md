@@ -96,4 +96,13 @@ patch 方法
     如果是普通属性，合并处理，子有留子，父有留父，父子属性同名，子属性覆盖父属性。
 ```
 
+**生命周期函数执行**
 
+```
+  在mergeOptions 后执行beforeCreate 函数。此时能从this.$options中获取到所有option的属性。
+  在initState后执行 created函数。此时能从this获取到所有的属性，方法等原始条件。（数据劫持已经执行完）
+  在mountComponent函数中，在初始渲染dom元素前执行 beforeMount函数，此时dom元素还没有渲染完。
+  在new Watcher 后执行mounted函数，此时所有的dom渲染流程已经走完。（dom和数据的关联关系已建立；实例化Watcher是同步操作）
+  在Watcher的run函数中执行beforeUpdate函数，update函数只是将视图放入更新列表，实际视图真正更新是执行run函数。
+  在scheduler.js 中，所有待更新视图都更新后再执行updated函数。所有视图更新完成后复制视图列表循环执行，因为每个视图对应一个生命函数。
+```

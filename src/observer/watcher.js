@@ -40,11 +40,12 @@ export default class Watcher {
     }
   }
 
-  update() { // 视图更新方法
+  update() { // 视图更新方法,其实是将视图放到渲染队列。
     queueWatcher(this);
   }
 
-  run() {  //视图重新渲染
+  run() {  //这时候视图才是重新渲染
+    this.cb && this.cb(); // 'beforeUpdate'
     this.get()
   }
 }

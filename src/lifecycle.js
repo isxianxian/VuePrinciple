@@ -2,6 +2,16 @@
 import { patch } from "./vdom/patch";
 import Watcher from "./observer/watcher";
 
+export function callHook(vm, hook) {
+  // 生命周期函数执行。init的时候会mergeOptions，所以所有的生命函数都是放在数组中。
+  let handlers = vm.$options[hook];
+  if (handlers) {
+    for (let i = 0; i < handlers.length; i++) {
+      handlers[i].call(vm); // 保证生命周期函数的this指向。
+    }
+  }
+}
+
 export function lifecycleMixin(Vue) {
   Vue.prototype._update = function (vnode) {
     const vm = this,
@@ -17,11 +27,10 @@ export function lifecycleMixin(Vue) {
   }
 }
 
-
 export function mountComponent(vm, el) {
   // 把真实的el选项赋值给示例的$el属性，为之后新dom替换旧dom做铺垫。
   vm.$el = el;
-
+  callHook(vm, 'beforeMount');
   // 渲染视图的核心方法
   let updateComponent = () => {
     let node = vm._render();
@@ -31,5 +40,6 @@ export function mountComponent(vm, el) {
   }
 
   // 渲染一次视图就创建一个视图渲染监视器Watcher(实际的视图渲染在实例化watcher里面)
-  new Watcher(vm, updateComponent, null, true);
+  new Watcher(vm, updateComponent, () => { callHook(vm, 'beforeUpdate') }, true);
+  callHook(vm, "mounted"); // 视图渲染执行完后执行mounted函数。
 }
