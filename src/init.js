@@ -3,12 +3,15 @@ import { initState } from './state.js';
 import { compileToFunctions } from './compiler/index.js';
 import { mountComponent } from './lifecycle.js';
 
+import { mergeOptions } from './util/index.js';
+
 
 export function initMixin(Vue) {
-  Vue.prototype.init = function (options) {
+  Vue.prototype._init = function (options) {
     let vm = this;
-    vm.$options = options;
-
+    console.log(vm.constructor.options, options, '12')
+    vm.$options = mergeOptions(vm.constructor.options, options);
+    // 实例的构造函数constructor就是自己的类。
     // 初始化实例状态
     initState(vm);
 

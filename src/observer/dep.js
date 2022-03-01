@@ -16,7 +16,6 @@ export default class Dep {
     this.subs.push(watcher);
   }
   notify() {  // 通知关联的watcher更新
-    console.log('kkk')
     this.subs.forEach(watcher => watcher.update())
   }
 }
