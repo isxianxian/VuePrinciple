@@ -1,5 +1,9 @@
 // patch 是用来渲染和更新视图的。
 export function patch(oldVnode, vnode) {
+  if (!oldVnode) {
+    console.log(vnode, '5');
+    return createElement(vnode);
+  }
 
   let isRealElement = oldVnode.nodeType;
   if (isRealElement) {
@@ -38,9 +42,25 @@ export function patch(oldVnode, vnode) {
   }
 }
 
+function createComp(vnode) {
+  let i = vnode.data;
+  if ((i = i.hook) && (i = i.init)) {
+    i(vnode);
+  }
+  if (vnode.componentInstance) {
+    return true;
+  }
+}
+
 function createElement(vnode) {
   let { tag, data, key, children, text } = vnode;
+
   if (typeof tag == 'string') { // 元素节点
+    if (createComp(vnode)) { // 如果是个组件元素
+      console.log(vnode, '60')
+      return vnode.componentInstance.$el;
+    }
+
     // 真实创建的元素会挂在虚拟节点el的属性上。
     vnode.el = document.createElement(tag);
     updateProperties(vnode); // 更新属性

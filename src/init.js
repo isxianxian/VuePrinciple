@@ -43,6 +43,7 @@ export function initMixin(Vue) {
       }
     }
 
+
     // 组件挂载的核心方法。把当前的组件示例挂载到真试的dom元素上。
     return mountComponent(vm, el);
   }

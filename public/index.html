@@ -10,12 +10,18 @@
 <body>
   <div id='app' a='b' class="hhhh" style='color:red;font-size:12px;'>
     <span>你好，{{name}}, 哈哈</span>
-    <p style='color:pink;font-size:12px;'>你好，{{name}}, 哈哈</p>
+    <p>jjjjj</p>
+    <hhh></hhh>
   </div>
 
 </body>
 <script src="../dist/vue.js"></script>
 <script>
+  // Vue.mixin({
+  //   created() {
+  //     console.log("我是全局混入");
+  //   },
+  // });
   let vm = new Vue({
     el: '#app',
     data() {
@@ -25,12 +31,13 @@
         obj: { key: '1' }
       }
     },
+    components: {
+      'hhh': {
+        template: "<div>这是我自己写的快乐组件</div>"
+      }
+    }
   })
-  setTimeout(() => {
-    vm.name = 'hahah';
-    vm.name = 'hahah1';
-    vm.name = 'hahah2';
-  }, 1000)
+
 
 </script>
 

@@ -16,6 +16,7 @@ export function lifecycleMixin(Vue) {
   Vue.prototype._update = function (vnode) {
     const vm = this,
       prevVNode = vm._vnode;
+
     vm._vnode = vnode; //把虚拟节点vnode挂载到vm实例上，来判断是第几次渲染。
     if (!prevVNode) {
       vm.$el = patch(vm.$el, vnode);

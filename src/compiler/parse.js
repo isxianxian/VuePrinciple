@@ -6,8 +6,8 @@ const startTagClose = /^\s*(\/?)>/; // 匹配标签结束  >
 const endTag = new RegExp(`^<\\/${qnameCapture}[^>]*>`); // 匹配标签结尾 如 </abc-123> 捕获里面的标签名
 const attribute = /^\s*([^\s"'<>\/=]+)(?:\s*(=)\s*(?:"([^"]*)"+|'([^']*)'+|([^\s"'=<>`]+)))?/; // 匹配属性  形如 id="app"
 
-let root, // 根元素
-  currentParent, // 当前父元素
+let root = null, // 根元素
+  currentParent = null, // 当前父元素
   stack = []; // 元素堆栈
 const TEXT_TYPE = 3;
 const ELEMENT_TYPE = 1;
@@ -56,7 +56,9 @@ function createASTElement({ tagName, attrs }) {
 
 
 function parse(html) {
-
+  root = null;
+  currentParent = null;
+  stack = [];
   while (html) {
     let htmlIndex = html.indexOf('<');
 

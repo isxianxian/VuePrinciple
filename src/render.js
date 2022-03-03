@@ -12,11 +12,11 @@ export function renderMixin(Vue) {
 
   Vue.prototype._c = function (...arg) {
     // 创建虚拟dom元素
-    return createElement(...arg);
+    return createElement(this, ...arg);
   }
   Vue.prototype._v = function (text) {
     // 创建虚拟文本元素
-    return createTextNode(text);
+    return createTextNode(this, text);
   }
   Vue.prototype._s = function (val) {
     return val == null

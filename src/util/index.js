@@ -2,6 +2,26 @@ export function isObject(object) {
   return typeof object === 'object' && object !== null;
 }
 
+export function isReservedTag(tagName) {
+  let str =
+    "html,body,base,head,link,meta,style,title," +
+    "address,article,aside,footer,header,h1,h2,h3,h4,h5,h6,hgroup,nav,section," +
+    "div,dd,dl,dt,figcaption,figure,picture,hr,img,li,main,ol,p,pre,ul," +
+    "a,b,abbr,bdi,bdo,br,cite,code,data,dfn,em,i,kbd,mark,q,rp,rt,rtc,ruby," +
+    "s,samp,small,span,strong,sub,sup,time,u,var,wbr,area,audio,map,track,video," +
+    "embed,object,param,source,canvas,script,noscript,del,ins," +
+    "caption,col,colgroup,table,thead,tbody,td,th,tr," +
+    "button,datalist,fieldset,form,input,label,legend,meter,optgroup,option," +
+    "output,progress,select,textarea," +
+    "details,dialog,menu,menuitem,summary," +
+    "content,element,shadow,template,blockquote,iframe,tfoot";
+  let obj = {};
+  str.split(",").forEach((tag) => {
+    obj[tag] = true;
+  });
+  return obj[tagName];
+}
+
 export function def(obj, key, val) {
   Object.defineProperty(obj, key, {
     enumerable: false,
@@ -37,7 +57,8 @@ function mergeHook(parentVal, childVal) {
   }
 }
 
-// 组件的合并策略
+// 组件，过滤器等的合并策略
+const ASSETS_TYPE = ["component", "directive", "filter"];
 function mergeAssets(parentVal, childVal) {
   let res = Object.create(parentVal); // res.__proto__ = parentVal;
   if (childVal) {
@@ -47,7 +68,9 @@ function mergeAssets(parentVal, childVal) {
   }
   return res;
 }
-strats.components = mergeAssets;
+ASSETS_TYPE.forEach(type => {
+  strats[type + 's'] = mergeAssets;
+})
 
 // 合并option的方法（最开始合并的时候parent.options 一定是空对象）
 export function mergeOptions(parent, child) {
@@ -65,7 +88,6 @@ export function mergeOptions(parent, child) {
 
   // 具体合并操作
   function mergeFiled(k) {
-    console.log(typeof parent[k], typeof child[k], k, '68')
     if (strats[k]) {  // 是生命函数
       options[k] = strats[k](parent[k], child[k]);
     } else if (typeof parent[k] == 'object' || typeof child[k] == 'object') { // 说明是个对象,对象合并，以子条件为准。
