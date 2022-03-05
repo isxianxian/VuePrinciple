@@ -8,7 +8,11 @@ let has = {};
 // 执行队列中的方法
 function flushScheduleQueue() {
   for (let i = 0; i < queue.length; i++) {
-    queue[i].run();
+    let watch = queue[i];
+    if (watch.before) {
+      watch.before(); // 'beforeUpdate'
+    }
+    watch.run();
   }
   const updatedQueue = queue.slice()
   queue = [];

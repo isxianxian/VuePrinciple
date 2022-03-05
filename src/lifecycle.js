@@ -41,6 +41,10 @@ export function mountComponent(vm, el) {
   }
 
   // 渲染一次视图就创建一个视图渲染监视器Watcher(实际的视图渲染在实例化watcher里面)
-  new Watcher(vm, updateComponent, () => { callHook(vm, 'beforeUpdate') }, true);
+  new Watcher(vm, updateComponent, () => { }, {
+    before() {
+      callHook(vm, 'beforeUpdate')
+    }
+  });
   callHook(vm, "mounted"); // 视图渲染执行完后执行mounted函数。
 }

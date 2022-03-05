@@ -1,7 +1,6 @@
 // patch 是用来渲染和更新视图的。
 export function patch(oldVnode, vnode) {
   if (!oldVnode) {
-    console.log(vnode, '5');
     return createElement(vnode);
   }
 
@@ -57,7 +56,6 @@ function createElement(vnode) {
 
   if (typeof tag == 'string') { // 元素节点
     if (createComp(vnode)) { // 如果是个组件元素
-      console.log(vnode, '60')
       return vnode.componentInstance.$el;
     }
 

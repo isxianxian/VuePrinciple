@@ -1,5 +1,6 @@
 // Watcher 监听者 当数据变化的时候指挥watcher去执行某些方法来更新。
 
+import { isObject } from '../util/index.js';
 import { pushTarget, popTarget } from './dep.js';
 import { queueWatcher } from './scheduler.js';
 
@@ -16,18 +17,34 @@ export default class Watcher {
     this.deps = []; // 存放有关的dep的容器
     this.depsId = new Set(); // 用来去重id
 
-    if (typeof exprOrFn === 'function') {
+    this.before = options.before; // beforeUpdate
+    this.user = options.user; // 标识用户watcher
+    this.deep = options.deep; // 深度监听
+
+    if (typeof exprOrFn === 'function') { // 渲染函数 updateComponent
       this.getter = exprOrFn;
+    } else { // watch监听的属性
+      this.getter = function () {
+        let path = exprOrFn.split('.'); // 可能是obj.k
+        let obj = vm;
+        for (let i = 0; i < path.length; i++) { // 拿到实际监听的那个key值
+          obj = obj[path[i]];
+        }
+        return obj;
+      }
     }
 
-    this.get(); // 实例化Watcher的时候get执行，渲染视图。
+    this.value = this.get();
+    // 实例化Watcher的时候get执行，渲染视图。
+    // 创建用户Watcher的时候拿到oldVal。
   }
 
 
   get() {
     pushTarget(this); // 视图渲染前将当前watcher放到全局中。表示watcher监测的组件正在渲染。
-    this.getter(); // 视图渲染函数执行。
+    let res = this.getter.call(this.vm); // 视图渲染函数执行。
     popTarget();// 视图渲染完将当前watcher移除。
+    return res;
   }
 
   addDep(dep) {
@@ -45,7 +62,18 @@ export default class Watcher {
   }
 
   run() {  //这时候视图才是重新渲染
-    this.cb && this.cb(); // 'beforeUpdate'
-    this.get()
+
+    const oldVal = this.value;
+    const newVal = this.get();
+    this.value = newVal; // 把新值存起来作为下一次的老值。
+
+    if (this.user) {
+      if (newVal != oldVal || isObject(newVal) || this.deep) {
+        this.cb.call(this.vm, newVal, oldVal)
+      }
+    } else {
+      this.cb.call(this.vm)
+    }
+
   }
 }

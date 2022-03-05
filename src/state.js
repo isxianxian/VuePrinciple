@@ -1,4 +1,5 @@
 import { observer } from './observer/index.js';
+import Watcher from './observer/watcher.js';
 
 // 初始化状态js
 export function initState(vm) {
@@ -45,4 +46,35 @@ function initData(vm) {
 };
 function initMethods(vm) { };
 function initComputed(vm) { };
-function initWatch(vm) { };
+
+
+function initWatch(vm) {
+  let watch = vm.$options.watch;
+  for (let k in watch) {
+    let handler = watch[k];
+    createWatcher(vm, k, handler);
+  }
+};
+function createWatcher(vm, k, handler, options = {}) {
+  if (typeof handler == 'object') {
+    options = handler;
+    handler = handler.handler;
+  }
+  if (typeof handler == 'string') {
+    handler = vm[handler]
+  }
+
+  return vm.$watch(k, handler, options);
+}
+
+export function stateMixin(Vue) {
+  Vue.prototype.$watch = function (exprOrFn, cb, options) {
+    let vm = this;
+    let watcher = new Watcher(vm, exprOrFn, cb, { ...options, user: true });
+
+    // 如果 immediate 为true，回调函数立刻执行。
+    if (options.immediate) {
+      cb();
+    }
+  }
+}
