@@ -77,6 +77,8 @@ function updateProperties(vnode, oldProps = {}) {
   // 更新属性，将新元素没有的属性全移除，新元素有的后面会设置上去。
   let { el, data: newProps = {} } = vnode;
 
+  // console.log(vnode);
+  // console.log(el, '81')
   // 先对oldnode的属性进行移除
   for (let k in oldProps) {
     if (!newProps[k]) {

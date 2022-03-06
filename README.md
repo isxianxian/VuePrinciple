@@ -132,13 +132,22 @@ Vue.Component(id , definition);
 原理
 
 ```
-  watch监听的值必须是在data中声明的值，data中声明的值在initData阶段都会被数据劫持从而监听到。
+  new Watcher(vm, exprOrFn, cb, options);
+
+  watch监听的值必须是在data中声明的值。
+  当options中有watch属性的时候，会去initWatch，创建数据的监听者。
+  option.user为true来表示是用户的监听。
+  此时exprOrFn 表示的是变量名，获取变量值的时候就会建立变量和监听的关系。
+  当变量变化时，数据监听者就会执行update，执行run，run执行完毕就会执行cb回调函数。cb就是用户自己写的处理函数。
+
+  this.value；this.before；this.deep；this.user；
 ```
 
 **computed 计算属性**
 
 ```
   如果计算属性依赖的值不发生变化，页面更新的时候不会计算属性不会重新计算，计算结果会被缓存，可以利用此api优化性能。
+  computed
 ```
 
 **生命周期函数执行**

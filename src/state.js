@@ -52,7 +52,14 @@ function initWatch(vm) {
   let watch = vm.$options.watch;
   for (let k in watch) {
     let handler = watch[k];
-    createWatcher(vm, k, handler);
+    if (Array.isArray(handler)) {
+      // 如果是数组就遍历进行创建
+      handler.forEach((handle) => {
+        createWatcher(vm, k, handle);
+      });
+    } else {
+      createWatcher(vm, k, handler);
+    }
   }
 };
 function createWatcher(vm, k, handler, options = {}) {

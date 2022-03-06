@@ -23,7 +23,7 @@ export default class Watcher {
 
     if (typeof exprOrFn === 'function') { // 渲染函数 updateComponent
       this.getter = exprOrFn;
-    } else { // watch监听的属性
+    } else { // watch监听的属性 => 建立值和watcher的关联关系。
       this.getter = function () {
         let path = exprOrFn.split('.'); // 可能是obj.k
         let obj = vm;

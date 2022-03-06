@@ -30,7 +30,6 @@ function createComponent(vm, tag, data, key, children, Ctor) {
   data.hook = {
     init(vnode) {
       let child = (vnode.componentInstance = new Ctor({ _isComponent: true })); //实例化组件
-      console.log(33)
       child.$mount();
     }
   };
