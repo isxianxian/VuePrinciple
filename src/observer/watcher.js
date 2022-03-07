@@ -21,6 +21,9 @@ export default class Watcher {
     this.user = options.user; // 标识用户watcher
     this.deep = options.deep; // 深度监听
 
+    this.lazy = options.lazy; // 标识computer
+    this.dirty = this.lazy; // dirty 可变，表示计算watcher是否需要重新计算；
+
     if (typeof exprOrFn === 'function') { // 渲染函数 updateComponent
       this.getter = exprOrFn;
     } else { // watch监听的属性 => 建立值和watcher的关联关系。
@@ -34,11 +37,10 @@ export default class Watcher {
       }
     }
 
-    this.value = this.get();
+    this.value = this.lazy ? undefined : this.get();
     // 实例化Watcher的时候get执行，渲染视图。
     // 创建用户Watcher的时候拿到oldVal。
   }
-
 
   get() {
     pushTarget(this); // 视图渲染前将当前watcher放到全局中。表示watcher监测的组件正在渲染。
@@ -58,7 +60,23 @@ export default class Watcher {
   }
 
   update() { // 视图更新方法,其实是将视图放到渲染队列。
-    queueWatcher(this);
+    if (this.lazy) {  // computed
+      this.dirty = true;
+    } else {
+      queueWatcher(this);
+    }
+  }
+
+  evaluate() {  // computed 重新计算
+    this.value = this.get();
+    this.dirty = false;
+  }
+
+  depend() {
+    let i = this.deps.length;
+    while (i--) {
+      this.deps[i].depend(); // 调用dep去收集依赖。
+    }
   }
 
   run() {  //这时候视图才是重新渲染

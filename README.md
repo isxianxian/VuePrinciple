@@ -147,7 +147,19 @@ Vue.Component(id , definition);
 
 ```
   如果计算属性依赖的值不发生变化，页面更新的时候不会计算属性不会重新计算，计算结果会被缓存，可以利用此api优化性能。
-  computed
+```
+
+原理
+
+```
+  当获取到init初始化computed的属性时，会对里面每个属性创建一个计算watcher。
+  new Watcher(vm , getFun , cb , {lazy:true});
+  lazy，标识是计算属性。通过在实例化watcher执行getFun建立依赖的值和计算watcher的关系，从而在依赖值发生变化的时候触发计算watcher更新update。
+
+  计算watcher有个属性dirty，当为true的时候重新计算computed的值。
+  watcher.update() => dirty:true。
+
+  当获取computed值时触发computed.get(), 拿到computedWatcher重新计算evaluate，再通知computed有关的渲染watcher进行渲染。
 ```
 
 **生命周期函数执行**

@@ -1,3 +1,4 @@
+import Dep from './observer/dep.js';
 import { observer } from './observer/index.js';
 import Watcher from './observer/watcher.js';
 
@@ -45,9 +46,8 @@ function initData(vm) {
   }
 };
 function initMethods(vm) { };
-function initComputed(vm) { };
 
-
+/** watch **/
 function initWatch(vm) {
   let watch = vm.$options.watch;
   for (let k in watch) {
@@ -85,3 +85,54 @@ export function stateMixin(Vue) {
     }
   }
 }
+/** watch **/
+
+
+/** computed **/
+function initComputed(vm) {
+  let computed = vm.$options.computed;
+
+  let watchers = (vm._computedWatchers = {}); // 用来存放计算watcher
+
+  for (let k in computed) {
+    let userDef = computed[k];
+    let getter = typeof userDef === 'function' ? userDef : userDef.get;
+    // 拿到getter函数。computed 里面可以写函数，也可以写对象。
+    watchers[k] = new Watcher(vm, getter, () => { }, { lazy: true });
+    defineComputed(vm, k, userDef);
+  }
+}
+
+let sharedPropertyDefinition = {
+  enumerable: true,
+  configurable: true,
+  get: () => { },
+  set: () => { }
+}
+
+function defineComputed(target, key, userDef) {
+  if (typeof userDef === 'function') {
+    sharedPropertyDefinition.get = createComputedGetter(key);
+  } else {
+    sharedPropertyDefinition.get = createComputedGetter(userDef.get);
+    sharedPropertyDefinition.set = userDef.set;
+  }
+  Object.defineProperty(target, key, sharedPropertyDefinition);
+}
+
+function createComputedGetter(key) {
+  return function () {
+    let watcher = this._computedWatchers[key];
+    if (watcher) {
+      if (watcher.dirty) { // 需要重新计算
+        watcher.evaluate();
+        if (Dep.target) {
+          watcher.depend();
+        }
+      }
+      return watcher.value; // 返回计算value值。
+    }
+  }
+}
+
+/** computed **/
